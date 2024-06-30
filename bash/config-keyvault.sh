@@ -133,6 +133,10 @@ db=$KEYVAULT_DB
 keys=$KEYVAULT_KEYS
 pass=$password_protected
 
+[sync]
+log=$KEYVAULT_LOG
+rclone_remote=$RCLONE_REMOTE
+
 [keychain]
 service=KeyVault
 account=private.key.password
@@ -167,6 +171,7 @@ EOF
 
 # Define the KeyVault environment variables
 KEYVAULT_DIR="$HOME/.config/keyvault"
+RCLONE_REMOTE=""
 flag_demo=false
 
 # Parse command line arguments
@@ -178,6 +183,9 @@ parse_args() {
             ;;
         --path=* | -p=*)
             KEYVAULT_DIR="${arg#*=}"
+            ;;
+        --rclone=*)
+            RCLONE_REMOTE="${arg#*=}"
             ;;
         --help | -h)
             usage
@@ -195,6 +203,7 @@ parse_args "$@"
 KEYVAULT_CONFIG="$KEYVAULT_DIR/config.ini"
 KEYVAULT_DB="$KEYVAULT_DIR/keyvault.db"
 KEYVAULT_KEYS="$KEYVAULT_DIR/keys"
+KEYVAULT_LOG="$KEYVAULT_DIR/sync.log"
 
 # Determine if password protection is needed based on demo flag
 if [ "$flag_demo" = "true" ]; then

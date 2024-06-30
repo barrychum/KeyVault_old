@@ -1,12 +1,18 @@
 #!/bin/bash
 
+# Display usage information
 usage() {
-    echo "Usage: $0 <key> <value> [--protected | -p] [--key=2048 | -k=2048] [--key=3072 | -k=3072] [--key=4096 | -k=4096]"
-    echo "   or"
-    echo "       $0 <-i | --interactive>"
+    printf "Usage: $0 <key> <value> \n"
+    printf "          [--protected|-p]\n"
+    printf "          [--key|-k=<2048|3072|4096>]\n"
+    printf "          [--path|-p=<installation path>]\n"
+    printf "          [--totp]\n"
+    printf "    or\n"
+    printf "       $0 <-i|--interactive>\n\n"
     exit 1
 }
 
+# Parse command-line arguments
 parse_args() {
     for arg in "$@"; do
         case $arg in
@@ -33,6 +39,7 @@ parse_args() {
     done
 }
 
+# Parse configuration from INI file
 parse_ini() {
     local ini_file="$1"
     local section=""
@@ -64,6 +71,7 @@ parse_ini() {
     done <"$ini_file"
 }
 
+# Retrieve a key's value from a file
 get_key_value_in_file() {
     local key=$1
     local file_location=$2
@@ -90,9 +98,9 @@ add_key_value() {
     # Create sec_env file if it doesn't exist
     touch "$ini_keyvault_db"
 
-    # Check if key exists and replace its value
+    # Check if key exists and replace its value if confirmed
     if grep -q "^$key=" "$ini_keyvault_db"; then
-        echo "Key already exists.  Overwrite ? (yes,no)"
+        echo "Key already exists. Overwrite? (yes/no)"
         read -r overwrite
         while [[ "$overwrite" != "yes" && "$overwrite" != "no" ]]; do
             echo "Invalid input. Please enter yes or no: "
@@ -110,6 +118,7 @@ add_key_value() {
     fi
 }
 
+# Interactive mode for user input
 interactive_mode() {
     # Prompt user for key
     echo -n "Enter key: "
@@ -146,8 +155,8 @@ interactive_mode() {
         flag_protected=false
     fi
 
-    # Prompt user for totp
-    echo -n "Is this used by One Time Password ? (yes/no): "
+    # Prompt user for TOTP usage
+    echo -n "Is this used by One Time Password? (yes/no): "
     read flag
 
     # Validate flag input (optional)
@@ -164,25 +173,27 @@ interactive_mode() {
     fi
 }
 
-##### main
+##### Main Script Execution #####
 
 KEYVAULT_DIR="$HOME/.config/keyvault"
-key_size="2048"        # default to use 4096 bit key
-flag_protected=false   # default to use password protected private key
-flag_interactive=false # default to use command line
-flag_totp=false        # default the key is not used for totp generation
+key_size="2048"        # Default key size
+flag_protected=false   # Default to non-protected private key
+flag_interactive=false # Default to non-interactive mode
+flag_totp=false        # Default to non-TOTP usage
 
+# Parse command-line arguments
 parse_args "$@"
 
 KEYVAULT_CONFIG="$KEYVAULT_DIR/config.ini"
 parse_ini "$KEYVAULT_CONFIG"
 
+# Determine execution mode: interactive or command-line
 if [ $flag_interactive = true ]; then
     interactive_mode
 else
-    # Check if we have at least two arguments
+    # Check if there are at least two arguments provided
     if [ "$#" -lt 2 ]; then
-    echo "broken"
+        echo "Insufficient arguments provided."
         usage
     else
         key=$1
@@ -190,22 +201,21 @@ else
     fi
 fi
 
-######## secret type
-# plain    0
-# totp     1
-
+# Determine secret type (plain or TOTP)
 if [ $flag_totp = true ]; then
     secret_type=1
 else
     secret_type=0
 fi
+
+# Calculate padding based on secret type and key protection
 padding=$((secret_type * 2))
 if $flag_protected; then
     ((padding = padding + 1))
 fi
 padding_char=$(printf "%s" "$padding")
 
-# Handle the optional parameter with a case statement
+# Encrypt and store value based on specified key size
 case "$key_size" in
 2048)
     if $flag_protected; then
@@ -241,3 +251,4 @@ case "$key_size" in
     usage
     ;;
 esac
+
