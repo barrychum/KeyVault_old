@@ -71,22 +71,22 @@ KEYVAULT_CONFIG="$KEYVAULT_DIR/config.ini"
 parse_ini "$KEYVAULT_CONFIG"
 
 if [ $flag_foreground = "true" ]; then
-    printf "$(date) [INFO] sync started\n" | tee -a "$ini_sync_log"
+    printf "$(date) [INFO] upload started\n" | tee -a "$ini_sync_log"
     rclone copy "$ini_keyvault_db" "$ini_sync_rclone_remote" >>"$ini_sync_log" 2>&1
     if [[ $? -eq 0 ]]; then
-        printf "$(date) [INFO] sync successful\n" | tee -a "$ini_sync_log"
+        printf "$(date) [INFO] upload successful\n" | tee -a "$ini_sync_log"
     else
         tail -n 1 "$ini_sync_log"
-        printf "$(date) [ERROR] sync failed\n" | tee -a "$ini_sync_log"
+        printf "$(date) [ERROR] upload failed\n" | tee -a "$ini_sync_log"
     fi
 else
     (
-        printf "$(date) [INFO] sync started\n" >>"$ini_sync_log"
+        printf "$(date) [INFO] upload started\n" >>"$ini_sync_log"
         rclone copy "$ini_keyvault_db" "$ini_sync_rclone_remote" >>"$ini_sync_log" 2>&1
         if [[ $? -eq 0 ]]; then
-            printf "$(date) [INFO] sync successful\n" >>"$ini_sync_log"
+            printf "$(date) [INFO] upload successful\n" >>"$ini_sync_log"
         else
-            printf "$(date) [ERROR] sync failed\n" >>"$ini_sync_log"
+            printf "$(date) [ERROR] upload failed\n" >>"$ini_sync_log"
         fi
     ) &
 fi

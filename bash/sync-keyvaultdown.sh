@@ -84,24 +84,24 @@ fi
 folderpath=$(dirname "$ini_keyvault_db")
 
 if [ $flag_foreground = "true" ]; then
-    printf "$(date) [INFO] sync started\n" | tee -a "$ini_sync_log"
+    printf "$(date) [INFO] download started\n" | tee -a "$ini_sync_log"
     printf "$(date) [INFO] backup $ini_keyvault_db.$NOW\n" | tee -a "$ini_sync_log"
     rclone copy "$ini_sync_rclone_remote" "$folderpath" >>"$ini_sync_log" 2>&1
     if [[ $? -eq 0 ]]; then
-        printf "$(date) [INFO] sync successful\n" | tee -a "$ini_sync_log"
+        printf "$(date) [INFO] download successful\n" | tee -a "$ini_sync_log"
     else
         tail -n 1 "$ini_sync_log"
-        printf "$(date) [ERROR] sync failed\n" | tee -a "$ini_sync_log"
+        printf "$(date) [ERROR] download failed\n" | tee -a "$ini_sync_log"
     fi
 else
     (
-        printf "$(date) [INFO] sync started\n" >>"$ini_sync_log"
+        printf "$(date) [INFO] download started\n" >>"$ini_sync_log"
         printf "$(date) [INFO] backup $ini_keyvault_db.$NOW\n" >>"$ini_sync_log"
         rclone copy "$ini_sync_rclone_remote" "$folderpath" >>"$ini_sync_log" 2>&1
         if [[ $? -eq 0 ]]; then
-            printf "$(date) [INFO] sync successful\n" >>"$ini_sync_log"
+            printf "$(date) [INFO] download successful\n" >>"$ini_sync_log"
         else
-            printf "$(date) [ERROR] sync failed\n" >>"$ini_sync_log"
+            printf "$(date) [ERROR] download failed\n" >>"$ini_sync_log"
         fi
     ) &
 fi
