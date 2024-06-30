@@ -1,11 +1,13 @@
 #!/bin/bash
 
+# Display usage information
 usage() {
     printf "Usage : $0 [--demo|-d] [--path|-p=<path to installation>] [--help|-h]\n"
     printf "\nExample : $0 -p=$HOME/test -d\n\n"
     exit 1
 }
-# Function to read password with asterisks and handle backspace/delete
+
+# Function to read password securely with asterisks and handle backspace/delete
 read_password() {
     local password=""
     local char=""
@@ -53,17 +55,13 @@ prompt_password_protection() {
 
     if [ "$password_protected" == "yes" ]; then
         echo "Enter a password for the private key: "
-        #read -s password1
         password1=$(read_password)
         echo "Confirm the password for the private key: "
-        #read -s password2
         password2=$(read_password)
         while [ "$password1" != "$password2" ]; do
             echo "Passwords do not match. Please enter the password again: "
-            #read -s password1
             password1=$(read_password)
             echo "Confirm the password for the private key: "
-            #read -s password2
             password2=$(read_password)
         done
     fi
@@ -171,6 +169,7 @@ EOF
 KEYVAULT_DIR="$HOME/.config/keyvault"
 flag_demo=false
 
+# Parse command line arguments
 parse_args() {
     for arg in "$@"; do
         case $arg in
@@ -197,17 +196,20 @@ KEYVAULT_CONFIG="$KEYVAULT_DIR/config.ini"
 KEYVAULT_DB="$KEYVAULT_DIR/keyvault.db"
 KEYVAULT_KEYS="$KEYVAULT_DIR/keys"
 
+# Determine if password protection is needed based on demo flag
 if [ "$flag_demo" = "true" ]; then
     password_protected="yes"
     password1=$(echo $(uuidgen) | cut -d'-' -f1)
 else
     prompt_password_protection
 fi
+
 setup_directories
 setup_config_file
 
 key_location="$KEYVAULT_KEYS"
 
+# Generate keys of different lengths without password protection
 key_length="2048"
 generate_keys "$key_length" "no" "$key_location"
 key_length="3072"
@@ -215,8 +217,8 @@ generate_keys "$key_length" "no" "$key_location"
 key_length="4096"
 generate_keys "$key_length" "no" "$key_location"
 
+# Generate keys with password protection if demo flag is true
 password_required_ini=$password_protected
-
 if [ $password_required_ini == "yes" ]; then
     key_length="2048"
     generate_keys "$key_length" "yes" "$key_location"
@@ -225,9 +227,10 @@ if [ $password_required_ini == "yes" ]; then
     key_length="4096"
     generate_keys "$key_length" "yes" "$key_location"
 fi
+
 echo
 
-# Confirm setup
+# Print setup confirmation and details
 echo "KeyVault environment setup complete."
 echo "Configuration directory: $KEYVAULT_DIR"
 echo "Configuration file     : $KEYVAULT_CONFIG"
@@ -235,6 +238,7 @@ echo "Database file          : $KEYVAULT_DB"
 echo "Keys directory         : $KEYVAULT_KEYS"
 echo "Password protection key: $password_protected"
 
+# Display demo password if demo flag is true
 if [ "$flag_demo" = "true" ]; then
     echo
     printf "Demo private key password: \e[31m\e[47m$password1\e[0m\n"
