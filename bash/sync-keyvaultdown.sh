@@ -78,6 +78,11 @@ if [ "$flag_nobackup" = false ]; then
     if [ -f "$ini_keyvault_db" ]; then
         NOW=$(date +"%Y%m%d-%H%M%S")
         mv "$ini_keyvault_db" "$ini_keyvault_db.$NOW"
+        if [ $flag_foreground = "true" ]; then
+            printf "$(date) [INFO] backup $ini_keyvault_db.$NOW\n" | tee -a "$ini_sync_log"
+        else
+            printf "$(date) [INFO] backup $ini_keyvault_db.$NOW\n" >>"$ini_sync_log"
+        fi
     fi
 fi
 
@@ -85,7 +90,7 @@ folderpath=$(dirname "$ini_keyvault_db")
 
 if [ $flag_foreground = "true" ]; then
     printf "$(date) [INFO] download started\n" | tee -a "$ini_sync_log"
-    printf "$(date) [INFO] backup $ini_keyvault_db.$NOW\n" | tee -a "$ini_sync_log"
+
     rclone copy "$ini_sync_rclone_remote" "$folderpath" >>"$ini_sync_log" 2>&1
     if [[ $? -eq 0 ]]; then
         printf "$(date) [INFO] download successful\n" | tee -a "$ini_sync_log"
@@ -96,7 +101,6 @@ if [ $flag_foreground = "true" ]; then
 else
     (
         printf "$(date) [INFO] download started\n" >>"$ini_sync_log"
-        printf "$(date) [INFO] backup $ini_keyvault_db.$NOW\n" >>"$ini_sync_log"
         rclone copy "$ini_sync_rclone_remote" "$folderpath" >>"$ini_sync_log" 2>&1
         if [[ $? -eq 0 ]]; then
             printf "$(date) [INFO] download successful\n" >>"$ini_sync_log"
