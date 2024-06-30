@@ -60,10 +60,12 @@ KeyVault leverages Public Key Infrastructure (PKI) to manage and encrypt your se
 ```
 KeyVault/
 │
-├── scripts/
+├── bash/
 │   └── # Bash scripts
+├── pwsh/
+│   └── # Powershell scripts
 ├── totp/
-│   └── src # Time-based one time password submodule
+│   └── src # Time-based one time password helper
 ├── LICENSE
 └── README.md
 ```
@@ -77,6 +79,7 @@ KeyVault/
 - OpenSSL
 - fzf (optional: for user-friendly selection of keys from the encrypted database)
 - macOS (for Keychain integration)
+- Windows (for Credential Manager integration)
 
 ### Installation
 
