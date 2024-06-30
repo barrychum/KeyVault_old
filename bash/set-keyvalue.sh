@@ -1,6 +1,37 @@
 #!/bin/bash
 
-KEYVAULT_CONFIG="$HOME/.config/keyvault/config.ini"
+usage() {
+    echo "Usage: $0 <key> <value> [--protected | -p] [--key=2048 | -k=2048] [--key=3072 | -k=3072] [--key=4096 | -k=4096]"
+    echo "   or"
+    echo "       $0 <-i | --interactive>"
+    exit 1
+}
+
+parse_args() {
+    for arg in "$@"; do
+        case $arg in
+        --protected | -p)
+            flag_protected=true
+            ;;
+        --interactive | -i)
+            flag_interactive=true
+            ;;
+        --path=* | -p=*)
+            KEYVAULT_DIR="${arg#*=}"
+            ;;
+        --key=* | -k=*)
+            key_size="${arg#*=}"
+            ;;
+        --totp)
+            flag_totp=true
+            ;;
+        --help | -h)
+            usage
+            exit 1
+            ;;
+        esac
+    done
+}
 
 parse_ini() {
     local ini_file="$1"
@@ -31,14 +62,6 @@ parse_ini() {
             export "ini_$key"="$value"
         fi
     done <"$ini_file"
-}
-
-# Function to display usage information
-usage() {
-    echo "Usage: $0 <key> <value> [--protected | -p] [--key=2048 | -k=2048] [--key=3072 | -k=3072] [--key=4096 | -k=4096]"
-    echo "   or"
-    echo "       $0 <-i | --interactive>"
-    exit 1
 }
 
 get_key_value_in_file() {
@@ -141,69 +164,44 @@ interactive_mode() {
     fi
 }
 
+##### main
 
+KEYVAULT_DIR="$HOME/.config/keyvault"
 key_size="2048"        # default to use 4096 bit key
 flag_protected=false   # default to use password protected private key
 flag_interactive=false # default to use command line
 flag_totp=false        # default the key is not used for totp generation
 
-if [[ "$*" == *-i* || "$*" == *--interactive* ]]; then
+parse_args "$@"
+
+KEYVAULT_CONFIG="$KEYVAULT_DIR/config.ini"
+parse_ini "$KEYVAULT_CONFIG"
+
+if [ $flag_interactive = true ]; then
     interactive_mode
 else
     # Check if we have at least two arguments
     if [ "$#" -lt 2 ]; then
+    echo "broken"
         usage
+    else
+        key=$1
+        value=$2
     fi
-
-    key=$1
-    value=$2
-    # Shift to remove the mandatory arguments from the list
-    shift 2
-
-    # Parse optional arguments
-    while [ "$#" -gt 0 ]; do
-        case "$1" in
-        --protected | -p)
-            flag_protected=true
-            shift
-            ;;
-        --key=2048 | -k=2048)
-            key_size="2048"
-            shift
-            ;;
-        --key=3072 | -k=3072)
-            key_size="3072"
-            shift
-            ;;
-        --key=4096 | -k=4096)
-            key_size="4096"
-            shift
-            ;;
-        --interactive | -i)
-            flag_interactive=true
-            shift
-            ;;
-        *)
-            usage
-            ;;
-        esac
-    done
 fi
-
-parse_ini "$KEYVAULT_CONFIG"
 
 ######## secret type
 # plain    0
 # totp     1
 
-if $flag_totp; then
+if [ $flag_totp = true ]; then
     secret_type=1
 else
     secret_type=0
 fi
-padding=$((secret_type * 2)) 
+padding=$((secret_type * 2))
 if $flag_protected; then
-    ((padding = padding + 1)) 
+    ((padding = padding + 1))
 fi
 padding_char=$(printf "%s" "$padding")
 

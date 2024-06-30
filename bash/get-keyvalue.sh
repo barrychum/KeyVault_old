@@ -1,7 +1,5 @@
 #!/bin/bash
 
-KEYVAULT_CONFIG="$HOME/.config/keyvault/config.ini"
-
 parse_ini() {
     local ini_file="$1"
     local section=""
@@ -86,29 +84,6 @@ read_password() {
     printf "%s" "$password"
 }
 
-#############
-
-# Paths
-parse_ini "$KEYVAULT_CONFIG"
-
-# Decrypt a value using RSA private key
-decrypt_value() {
-    local encrypted_value="$1"
-    local private_key="$2"
-    printf "%s" "$encrypted_value" | base64 --decode |
-        openssl pkeyutl -decrypt -inkey "$private_key"
-}
-
-decrypt_protected_value() {
-    local encrypted_value="$1"
-    local private_key="$2"
-    local private_key_pass="$3"
-
-    printf "%s" "$encrypted_value" | base64 --decode |
-        openssl pkeyutl -decrypt -inkey "$private_key" -passin pass:"$private_key_pass"
-
-}
-
 get_password() {
     # Retrieve the password
     keychain_password=$(security find-generic-password -s "$ini_keychain_service" -a "$ini_keychain_account" -w)
@@ -132,13 +107,57 @@ key_exist_in_file() {
     return 0
 }
 
+decrypt_value() {
+    local encrypted_value="$1"
+    local private_key="$2"
+    printf "%s" "$encrypted_value" | base64 --decode |
+        openssl pkeyutl -decrypt -inkey "$private_key"
+}
+
+decrypt_protected_value() {
+    local encrypted_value="$1"
+    local private_key="$2"
+    local private_key_pass="$3"
+
+    printf "%s" "$encrypted_value" | base64 --decode |
+        openssl pkeyutl -decrypt -inkey "$private_key" -passin pass:"$private_key_pass"
+
+}
+
+parse_args() {
+    for arg in "$@"; do
+        case $arg in
+        --display | -d)
+            flag_display=true
+            ;;
+        --path=* | -p=*)
+            KEYVAULT_DIR="${arg#*=}"
+            ;;
+        --help | -h)
+            usage
+            exit 1
+            ;;
+        esac
+    done
+}
+
+#############
+
+KEYVAULT_DIR="$HOME/.config/keyvault"
+flag_display=false
+
+parse_args "$@"
+
+KEYVAULT_CONFIG="$KEYVAULT_DIR/config.ini"
+parse_ini "$KEYVAULT_CONFIG"
+
 # Check if the mandatory argument is provided
 if [ -z "$1" ]; then
     usage
 fi
-
 key=$1
-if [ "$2" == "--display" ]; then
+
+if [ $flag_display = true ]; then
     display_format="%s\n"
 else
     display_format="%s"
@@ -198,5 +217,5 @@ if key_exist_in_file "$key" "$ini_keyvault_db"; then
         ;;
     esac
 else
-    printf "%s" ""
+    printf ""
 fi

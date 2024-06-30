@@ -45,7 +45,24 @@ get_key_value_in_file() {
   printf "%s" "$value"
 }
 
-# load_ini "$KEYVAULT_CONFIG"
+parse_args() {
+    for arg in "$@"; do
+        case $arg in
+        --display | -d)
+            flag_display=true
+            ;;
+        esac
+    done
+}
+
+###########
+
+KEYVAULT_DIR="$HOME/.config/keyvault"
+flag_display=false
+
+parse_args "$@"
+
+KEYVAULT_CONFIG="$KEYVAULT_DIR/config.ini"
 parse_ini "$KEYVAULT_CONFIG"
 
 # Prepare the list with anotation
@@ -90,13 +107,14 @@ script_file=$(basename "$script_path")
 # Run the get-keyvalue.sh in the same directory to retrieve key
 decrypted_value=$(${script_dir}/get-keyvalue.sh "$clean_key")
 
-if [ "$1" = "--display" ]; then
-  echo "$clean_key : "
-  printf "%s\n" "$decrypted_value"
+printf "\n"
+if [ $flag_display = true ]; then
+  printf "$clean_key : \n"
+  printf "%s\n\n" "$decrypted_value"
 else
   if [ "$decrypted_value" ]; then
     # Copy the value to the clipboard
-    echo "$clean_key value available in clipboard for $clipboard_duration seconds"
+    printf "$clean_key value available in clipboard for $clipboard_duration seconds\n\n"
     printf "%s" "$decrypted_value" | pbcopy
 
     (
