@@ -73,6 +73,7 @@ prompt_password_protection() {
 setup_directories() {
     mkdir -p "$KEYVAULT_DIR"
     mkdir -p "$KEYVAULT_KEYS"
+    chmod 700 "$KEYVAULT_KEYS"
 }
 
 # Function to generate the key pair
