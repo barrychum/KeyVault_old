@@ -95,7 +95,7 @@ function Generate-Keys {
 
     if ($password_protected -eq "yes") {
         Write-Host "Generating $key_length-bit password protected keys ..."
-        $passwordPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
+        $passwordPlain = ConvertFrom-SecureString $password -AsPlainText
         & openssl genpkey -algorithm RSA -out $private_key_path -aes256 -pass pass:$passwordPlain -pkeyopt rsa_keygen_bits:$key_length 2>$null
         & openssl rsa -pubout -in $private_key_path -out $public_key_path -passin pass:$passwordPlain 2>$null
         $passwordPlain = $null
@@ -173,7 +173,7 @@ private=$KEYVAULT_KEYS\KeyVault_4096_protected_private.pem
 
 if ($demo) {
     $password_protected = "yes"
-    $password1 = ConvertTo-SecureString ([Guid]::NewGuid().ToString().Substring(0, 8)) -AsPlainText -Force
+    $password1 = ConvertTo-SecureString (New-Guid).Guid.Substring(0, 8) -AsPlainText -Force
 }
 else {
     $password_protected, $password1 = Prompt-PasswordProtection
@@ -207,9 +207,10 @@ Write-Host "Password protection key: $password_protected"
 
 # Display demo password if demo flag is true
 if ($demo) {
-    $demoPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password1))
+    $demoPassword = ConvertFrom-SecureString $password1 -AsPlainText
     Write-Host "`nDemo private key password: " -NoNewline
-    Write-Host $demoPassword -ForegroundColor Red -BackgroundColor White
+    Write-Host $demoPassword -ForegroundColor Red -BackgroundColor White -NoNewline
+    Write-Host
     $demoPassword = $null
 }
 
