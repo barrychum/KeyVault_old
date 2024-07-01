@@ -1,3 +1,9 @@
+param(
+    [Parameter(Position = 0)]
+    $key
+    #[switch]$display
+)
+
 $KEYVAULT_CONFIG = "$env:LOCALAPPDATA\keyvault\config.ini"
 
 function Read-Ini {
@@ -155,12 +161,18 @@ function Test-KeyExistsInFile {
 # Main script
 Read-Ini $KEYVAULT_CONFIG
 
-if ($args.Count -eq 0) {
-    Show-Usage
-}
+#if ($args.Count -eq 0) {
+#    Show-Usage
+#}
 
-$key = $args[0]
-$displayFormat = if ($args -contains "-Display") { "{0}`n" } else { "{0}" }
+# $key = $args[0]
+#$displayFormat = if ($args -contains "-Display") { "{0}`n" } else { "{0}" }
+#if ($display) {
+#    $displayFormat = "{0}`n"
+#}
+#else {
+#    $displayFormat = "{0}"
+#}
 
 if (Test-KeyExistsInFile $key $Script:ini_keyvault_db) {
     $value = Get-KeyValueInFile $key $Script:ini_keyvault_db
@@ -183,7 +195,8 @@ if (Test-KeyExistsInFile $key $Script:ini_keyvault_db) {
                 $privateKeyPassword = Get-Password
                 $decrypted = Decrypt-ProtectedValue $var1 $Script:ini_key2048_protected_private $privateKeyPassword
             }
-            $displayFormat -f $decrypted
+            # $displayFormat -f $decrypted
+            $decrypted
         }
         512 {
             if ($isEncrypted -eq 0) {
@@ -195,7 +208,8 @@ if (Test-KeyExistsInFile $key $Script:ini_keyvault_db) {
                 $privateKeyPassword = Get-Password
                 $decrypted = Decrypt-ProtectedValue $var1 $Script:ini_key3072_protected_private $privateKeyPassword
             }
-            $displayFormat -f $decrypted
+            # $displayFormat -f $decrypted
+            $decrypted
         }
         684 {
             if ($isEncrypted -eq 0) {
@@ -207,7 +221,8 @@ if (Test-KeyExistsInFile $key $Script:ini_keyvault_db) {
                 $privateKeyPassword = Get-Password
                 $decrypted = Decrypt-ProtectedValue $var1 $Script:ini_key4096_protected_private $privateKeyPassword
             }
-            $displayFormat -f $decrypted
+            # $displayFormat -f $decrypted
+            $decrypted
         }
         default { Write-Host "Invalid length: $messageLength" }
     }
