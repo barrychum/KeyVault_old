@@ -37,7 +37,7 @@ function Prompt-PasswordProtection {
     if ($password_protected -eq "yes") {
         $password1 = Read-Host "Enter a password for the private key" -AsSecureString
         $password2 = Read-Host "Confirm the password for the private key" -AsSecureString
-
+        
         while (-not (CompareSecureString $password1 $password2)) {
             Write-Host "Passwords do not match. Please try again."
             $password1 = Read-Host "Enter a password for the private key" -AsSecureString
@@ -53,7 +53,7 @@ function Prompt-PasswordProtection {
 
 # Function to compare two SecureString objects
 function CompareSecureString([System.Security.SecureString]$ss1, [System.Security.SecureString]$ss2) {
-    return (ConvertFrom-SecureString $ss1) -eq (ConvertFrom-SecureString $ss2)
+    return (ConvertFrom-SecureString $ss1 -AsPlainText) -eq (ConvertFrom-SecureString $ss2 -AsPlainText)
 }
 
 # Function to create the KeyVault directories
@@ -88,7 +88,7 @@ function Generate-Keys {
     $private_key_path = Join-Path $key_location $private_key_filename
     $public_key_path = Join-Path $key_location $public_key_filename
 
-    if (Test-Path $private_key_path -or Test-Path $public_key_path) {
+    if ((Test-Path $private_key_path) -or (Test-Path $public_key_path)) {
         Write-Host "Error: One or both target files already exist. Please choose a different name or location." -ForegroundColor Red
         exit 1
     }
