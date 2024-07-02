@@ -6,7 +6,8 @@ param (
     [string]$path,
     [switch]$protected,
     [switch]$interactive,
-    $keySize = "2048"
+    $keySize = "2048",
+    [switch]$totp
 )
 
 $KEYVAULT_DIR = if ($path) { $path } else { Join-Path $env:LOCALAPPDATA "keyvault" }
@@ -148,7 +149,6 @@ function Start-InteractiveMode {
 }
 
 # Main script
-$flagTotp = $false
 
 if ($interactive) {
     $params = Start-InteractiveMode
@@ -156,17 +156,18 @@ if ($interactive) {
     $value = $params.Value
     $keySize = $params.KeySize
     $protected = $params.FlagProtected
-    $flagTotp = $params.FlagTotp
+    $totp = $params.FlagTotp
 }
 else {
     if ( (-not $key) -or (-not $value)) {
         Show-Usage
     }
+
 }
 
 Read-Ini $KEYVAULT_CONFIG
 
-$secretType = if ($flagTotp) { 1 } else { 0 }
+$secretType = if ($totp) { 1 } else { 0 }
 $padding = $secretType * 2
 if ($protected) { $padding++ }
 $paddingChar = [string]$padding
