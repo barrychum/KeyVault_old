@@ -4,6 +4,7 @@ param (
     [Parameter(Position = 1)]
     $value,
     [string]$path,
+    [switch]$protected,
     $keySize = "2048"
 )
 
@@ -41,7 +42,7 @@ function Read-Ini {
 }
 
 function Show-Usage {
-    Write-Host "Usage: $($MyInvocation.MyCommand.Name) <key> <value> [-Protected] [-KeySize <2048|3072|4096>]"
+    Write-Host "Usage: $($MyInvocation.MyCommand.Name) <key> <value> [-protected] [-keySize <2048|3072|4096>]"
     Write-Host "   or"
     Write-Host "       $($MyInvocation.MyCommand.Name) [-Interactive]"
     exit 1
@@ -156,21 +157,9 @@ else {
     if ( (-not $key) -or (-not $value)) {
         Show-Usage
     }
-
-    for ($i = 2; $i -lt $args.Count; $i++) {
-        switch ($args[$i]) {
-            "-Protected" { $flagProtected = $true }
-            "-KeySize" { 
-                $i++
-                $keySize = $args[$i]
-                if ($keySize -notin @("2048", "3072", "4096")) {
-                    Show-Usage
-                }
-            }
-            default { Show-Usage }
-        }
-    }
 }
+
+if ($protected) { $flagProtected = $true } else { $flagProtected = $false }
 
 Read-Ini $KEYVAULT_CONFIG
 
@@ -193,7 +182,7 @@ switch ($keySize) {
 }
 
 # Ensure the path is in the correct format for OpenSSL
-$publicKeyPath = $publicKeyPath -replace '\\', '/'
+### $publicKeyPath = $publicKeyPath -replace '\\', '/'
 
 $encryptedValue = "$(Encrypt-Value $value $publicKeyPath)$paddingChar"
 Add-KeyValue $key $encryptedValue
