@@ -5,6 +5,7 @@ param (
     $value,
     [string]$path,
     [switch]$protected,
+    [switch]$interactive,
     $keySize = "2048"
 )
 
@@ -66,15 +67,21 @@ function Encrypt-Value {
         [string]$publicKeyPath
     )
 
-    # Use OpenSSL for encryption
-    $inputBytes = [System.Text.Encoding]::UTF8.GetBytes($value)
+    try {
+        $inputBytes = [System.Text.Encoding]::UTF8.GetBytes($value)
 
-    $tempOutputFile = [System.IO.Path]::GetTempFileName()
-    $inputBytes | openssl pkeyutl -encrypt -pubin -inkey $publicKeyPath -out $tempOutputFile 
-    $encryptedBytes = [System.IO.File]::ReadAllBytes($tempOutputFile)
-    Remove-Item -Path $tempOutputFile -ErrorAction SilentlyContinue
+        # Capturing stdout from openssl fails
+        # use a temp file to capture encrypted data
+        # the temporary file is removed to reduced risk
+        $tempOutputFile = (New-TemporaryFile).fullname
+        $inputBytes | openssl pkeyutl -encrypt -pubin -inkey $publicKeyPath -out $tempOutputFile 
+        $encryptedBytes = [System.IO.File]::ReadAllBytes($tempOutputFile)
 
-    return [Convert]::ToBase64String($encryptedBytes)
+        return [Convert]::ToBase64String($encryptedBytes)
+    }
+    finally {
+        Remove-Item -Path $tempOutputFile -ErrorAction SilentlyContinue
+    }
 }
 
 function Add-KeyValue {
@@ -141,16 +148,14 @@ function Start-InteractiveMode {
 }
 
 # Main script
-$flagProtected = $false
-$flagInteractive = $false
 $flagTotp = $false
 
-if ($args -contains "-i" -or $args -contains "-Interactive") {
+if ($interactive) {
     $params = Start-InteractiveMode
     $key = $params.Key
     $value = $params.Value
     $keySize = $params.KeySize
-    $flagProtected = $params.FlagProtected
+    $protected = $params.FlagProtected
     $flagTotp = $params.FlagTotp
 }
 else {
@@ -159,24 +164,22 @@ else {
     }
 }
 
-if ($protected) { $flagProtected = $true } else { $flagProtected = $false }
-
 Read-Ini $KEYVAULT_CONFIG
 
 $secretType = if ($flagTotp) { 1 } else { 0 }
 $padding = $secretType * 2
-if ($flagProtected) { $padding++ }
+if ($protected) { $padding++ }
 $paddingChar = [string]$padding
 
 switch ($keySize) {
     "2048" {
-        $publicKeyPath = if ($flagProtected) { $Script:ini_key2048_protected_public } else { $Script:ini_key2048_public }
+        $publicKeyPath = if ($protected) { $Script:ini_key2048_protected_public } else { $Script:ini_key2048_public }
     }
     "3072" {
-        $publicKeyPath = if ($flagProtected) { $Script:ini_key3072_protected_public } else { $Script:ini_key3072_public }
+        $publicKeyPath = if ($protected) { $Script:ini_key3072_protected_public } else { $Script:ini_key3072_public }
     }
     "4096" {
-        $publicKeyPath = if ($flagProtected) { $Script:ini_key4096_protected_public } else { $Script:ini_key4096_public }
+        $publicKeyPath = if ($protected) { $Script:ini_key4096_protected_public } else { $Script:ini_key4096_public }
     }
     default { Show-Usage }
 }
