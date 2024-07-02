@@ -1,10 +1,11 @@
 param (
     [Parameter(Position = 0, Mandatory = $true)]
-    [string]$key
+    [string]$key,
+    [string]$path
 )
 
-$KEYVAULT_DIR = "$env:LOCALAPPDATA\keyvault"
-$KEYVAULT_CONFIG = "$KEYVAULT_DIR\config.ini"
+$KEYVAULT_DIR = if ($path) { $path } else { Join-Path $env:LOCALAPPDATA "keyvault" }
+$KEYVAULT_CONFIG = Join-Path $KEYVAULT_DIR "config.ini"
 
 function Read-Ini {
     param (
