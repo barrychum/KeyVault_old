@@ -1,3 +1,34 @@
+<#
+.SYNOPSIS
+    Encrypts sensitive data and stores it securely in a key vault configuration file.
+.DESCRIPTION
+    This script facilitates the encryption and storage of sensitive information using OpenSSL for encryption and INI files for configuration storage.
+    It supports both interactive and parameterized modes for flexibility in usage.
+.PARAMETER key
+    Specifies the key under which the encrypted value will be stored in the key vault.
+.PARAMETER value
+    Specifies the sensitive data to be encrypted and stored.
+.PARAMETER path
+    Specifies the directory path where the configuration files are stored. Defaults to $env:LOCALAPPDATA\keyvault.
+.PARAMETER protected
+    Switch parameter. When specified, indicates that the encryption key should be password-protected.
+.PARAMETER interactive
+    Switch parameter. When specified, prompts the user for input interactively.
+.PARAMETER keySize
+    Specifies the size of the encryption key. Allowed values are 2048, 3072, or 4096 bits. Defaults to 2048 bits.
+.PARAMETER totp
+    Switch parameter. When specified, indicates that the value is used for One Time Password.
+.NOTES
+    - Requires OpenSSL to be installed and accessible from the system's PATH environment variable.
+    - Assumes INI files for key configurations are present and accessible.
+.EXAMPLE
+    Encrypts and stores a value in the key vault:
+    PS C:\> .\Encrypt-SensitiveData.ps1 "myKey" "mySecret" -protected -keySize 3072
+.EXAMPLE
+    Runs the script in interactive mode:
+    PS C:\> .\Encrypt-SensitiveData.ps1 -Interactive
+#>
+
 param (
     [Parameter(Position = 0)]
     [string]$key,
@@ -14,6 +45,15 @@ $KEYVAULT_DIR = if ($path) { $path } else { Join-Path $env:LOCALAPPDATA "keyvaul
 $KEYVAULT_CONFIG = Join-Path $KEYVAULT_DIR "config.ini"
 
 function Read-Ini {
+    <#
+    .SYNOPSIS
+        Reads key-value pairs from an INI configuration file.
+    .DESCRIPTION
+        Parses an INI file and sets variables in the script scope accordingly.
+    .PARAMETER iniFile
+        Specifies the path to the INI configuration file.
+    #>
+
     param (
         [string]$iniFile
     )
@@ -44,6 +84,13 @@ function Read-Ini {
 }
 
 function Show-Usage {
+    <#
+    .SYNOPSIS
+        Displays usage instructions for the script.
+    .DESCRIPTION
+        Shows how to use the script with examples of valid command syntax.
+    #>
+
     Write-Host "Usage: $($MyInvocation.MyCommand.Name) <key> <value> [-protected] [-keySize <2048|3072|4096>]"
     Write-Host "   or"
     Write-Host "       $($MyInvocation.MyCommand.Name) [-Interactive]"
@@ -51,6 +98,17 @@ function Show-Usage {
 }
 
 function Get-KeyValueInFile {
+    <#
+    .SYNOPSIS
+        Retrieves the value associated with a specific key from a file.
+    .DESCRIPTION
+        Searches for a key-value pair in a file and returns the corresponding value.
+    .PARAMETER key
+        Specifies the key whose value is to be retrieved.
+    .PARAMETER fileLocation
+        Specifies the path to the file where the key-value pairs are stored.
+    #>
+
     param (
         [string]$key,
         [string]$fileLocation
@@ -63,6 +121,17 @@ function Get-KeyValueInFile {
 }
 
 function Encrypt-Value {
+    <#
+    .SYNOPSIS
+        Encrypts a given value using OpenSSL.
+    .DESCRIPTION
+        Encrypts a string value using OpenSSL and returns the encrypted value as a base64-encoded string.
+    .PARAMETER value
+        Specifies the value to be encrypted.
+    .PARAMETER publicKeyPath
+        Specifies the path to the public key file used for encryption.
+    #>
+
     param (
         [string]$value,
         [string]$publicKeyPath
@@ -74,7 +143,7 @@ function Encrypt-Value {
         # Capturing stdout from openssl fails
         # use a temp file to capture encrypted data
         # the temporary file is removed to reduced risk
-        $tempOutputFile = (New-TemporaryFile).fullname
+        $tempOutputFile = (New-TemporaryFile).Fullname
         $inputBytes | openssl pkeyutl -encrypt -pubin -inkey $publicKeyPath -out $tempOutputFile 
         $encryptedBytes = [System.IO.File]::ReadAllBytes($tempOutputFile)
 
@@ -86,6 +155,18 @@ function Encrypt-Value {
 }
 
 function Add-KeyValue {
+    <#
+    .SYNOPSIS
+        Adds or updates a key-value pair in the key vault configuration file.
+    .DESCRIPTION
+        Checks if the key already exists in the configuration file. If yes, prompts the user to overwrite or abort.
+        If no, adds the new key-value pair to the configuration file.
+    .PARAMETER key
+        Specifies the key under which the value will be stored.
+    .PARAMETER value
+        Specifies the encrypted value to be stored.
+    #>
+
     param (
         [string]$key,
         [string]$value
@@ -119,6 +200,13 @@ function Add-KeyValue {
 }
 
 function Start-InteractiveMode {
+    <#
+    .SYNOPSIS
+        Enters interactive mode to prompt the user for key vault configuration details.
+    .DESCRIPTION
+        Prompts the user to enter the key, value, key size, and other flags interactively.
+    #>
+
     $key = Read-Host "Enter key"
     $value = Read-Host "Enter value for '$key'"
     $keySize = Read-Host "Enter key size (2048, 3072, 4096)"
