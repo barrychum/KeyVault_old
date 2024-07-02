@@ -1,5 +1,14 @@
+param (
+    [Parameter(Position = 0)]
+    [string]$key,
+    [Parameter(Position = 1)]
+    $value,
+    [string]$path,
+    $keySize = "2048"
+)
 
-$KEYVAULT_CONFIG = "$env:LOCALAPPDATA\keyvault\config.ini"
+$KEYVAULT_DIR = if ($path) { $path } else { Join-Path $env:LOCALAPPDATA "keyvault" }
+$KEYVAULT_CONFIG = Join-Path $KEYVAULT_DIR "config.ini"
 
 function Read-Ini {
     param (
@@ -45,8 +54,8 @@ function Get-KeyValueInFile {
     )
 
     $value = Get-Content $fileLocation | 
-        Where-Object { $_ -match "^$key=" } | 
-        ForEach-Object { $_.Split('=', 2)[1] }
+    Where-Object { $_ -match "^$key=" } | 
+    ForEach-Object { $_.Split('=', 2)[1] }
     return $value
 }
 
@@ -56,27 +65,15 @@ function Encrypt-Value {
         [string]$publicKeyPath
     )
 
-    $tempInputFile = [System.IO.Path]::GetTempFileName()
+    # Use OpenSSL for encryption
+    $inputBytes = [System.Text.Encoding]::UTF8.GetBytes($value)
+
     $tempOutputFile = [System.IO.Path]::GetTempFileName()
+    $inputBytes | openssl pkeyutl -encrypt -pubin -inkey $publicKeyPath -out $tempOutputFile 
+    $encryptedBytes = [System.IO.File]::ReadAllBytes($tempOutputFile)
+    Remove-Item -Path $tempOutputFile -ErrorAction SilentlyContinue
 
-    try {
-        [System.IO.File]::WriteAllText($tempInputFile, $value)
-
-        # Use OpenSSL for encryption
-        $opensslOutput = & openssl pkeyutl -encrypt -pubin -inkey $publicKeyPath -in $tempInputFile -out $tempOutputFile 2>&1
-
-        if ($LASTEXITCODE -ne 0) {
-            throw "OpenSSL encryption failed: $opensslOutput"
-        }
-
-        $encryptedBytes = [System.IO.File]::ReadAllBytes($tempOutputFile)
-        return [Convert]::ToBase64String($encryptedBytes)
-    }
-    finally {
-        # Clean up temporary files
-        Remove-Item -Path $tempInputFile -ErrorAction SilentlyContinue
-        Remove-Item -Path $tempOutputFile -ErrorAction SilentlyContinue
-    }
+    return [Convert]::ToBase64String($encryptedBytes)
 }
 
 function Add-KeyValue {
@@ -134,16 +131,15 @@ function Start-InteractiveMode {
     $flagTotp = ($flagTotp -eq "yes")
 
     return @{
-        Key = $key
-        Value = $value
-        KeySize = $keySize
+        Key           = $key
+        Value         = $value
+        KeySize       = $keySize
         FlagProtected = $flagProtected
-        FlagTotp = $flagTotp
+        FlagTotp      = $flagTotp
     }
 }
 
 # Main script
-$keySize = "2048"
 $flagProtected = $false
 $flagInteractive = $false
 $flagTotp = $false
@@ -157,12 +153,9 @@ if ($args -contains "-i" -or $args -contains "-Interactive") {
     $flagTotp = $params.FlagTotp
 }
 else {
-    if ($args.Count -lt 2) {
+    if ( (-not $key) -or (-not $value)) {
         Show-Usage
     }
-
-    $key = $args[0]
-    $value = $args[1]
 
     for ($i = 2; $i -lt $args.Count; $i++) {
         switch ($args[$i]) {
