@@ -21,9 +21,6 @@ param (
     [string]$path
 )
 
-$KEYVAULT_DIR = if ($path) { $path } else { Join-Path $env:LOCALAPPDATA "keyvault" }
-$KEYVAULT_CONFIG = Join-Path $KEYVAULT_DIR "config.ini"
-
 function Read-Ini {
     <#
     .SYNOPSIS
@@ -208,6 +205,9 @@ function Decrypt-ProtectedValue {
 }
 
 # Main Script Execution
+$KEYVAULT_DIR = if ($path) { $path } else { Join-Path $env:LOCALAPPDATA "keyvault" }
+$KEYVAULT_CONFIG = Join-Path $KEYVAULT_DIR "config.ini"
+
 Read-Ini $KEYVAULT_CONFIG
 
 if (-not $key) { Show-Usage }
