@@ -1,8 +1,8 @@
-
 param (
     [string]$path
 )
 
+# Function to read key-value pairs from an INI file
 function Read-Ini {
     <#
     .SYNOPSIS
@@ -42,13 +42,20 @@ function Read-Ini {
     }
 }
 
+# Function to display usage information
 function Show-Usage {
+    <#
+    .SYNOPSIS
+        Displays the usage information for the script.
+    .DESCRIPTION
+        Outputs the correct usage syntax for the script.
+    #>
 
     Write-Host "Usage: $($MyInvocation.MyCommand.Name)"
-
     exit 1
 }
 
+# Function to retrieve the value associated with a key from a file
 function Get-KeyValueInFile {
     <#
     .SYNOPSIS
@@ -72,6 +79,7 @@ function Get-KeyValueInFile {
     return $value
 }
 
+# Function to check if a key exists in a file
 function Test-KeyExistsInFile {
     <#
     .SYNOPSIS
@@ -93,41 +101,48 @@ function Test-KeyExistsInFile {
 }
 
 # Main Script Execution
+
+# Determine the directory path for the key vault
 $KEYVAULT_DIR = if ($path) { $path } else { Join-Path $env:LOCALAPPDATA "keyvault" }
 $KEYVAULT_CONFIG = Join-Path $KEYVAULT_DIR "config.ini"
 
+# Read key-value pairs from the configuration file
 Read-Ini $KEYVAULT_CONFIG
 
+# Extract the file name from the key vault database path
 $iniFile = Split-Path -Path $ini_keyvault_db -Leaf
 $escapedLast = [regex]::Escape($iniFile)
 $oldPath = [regex]::Replace($ini_keyvault_db, "$escapedLast$", '')
 "Old path: $oldPath"
 
+# Obtain the directory path of the current INI file
 $currentIniPath = (Split-Path -Path $KEYVAULT_CONFIG -Parent) + '\'
 "Ini path: $currentIniPath"
 
+# Prompt the user to enter a new path or use the current location of the INI file
 $newPath = Read-Host "Enter new path or 'enter' to use the current location of ini"
 
+if ($newPath) {
+    "New path provided"
 
-if ( $newPath ) {
-    "new path provided"
-
-    # Get a proper formatted newPath format
+    # Format the new path correctly
     $newPath = (Split-Path -Path (Join-Path $newPath "fakefile") -Parent) + '\'
 
     "Replacing: $oldPath --> $newPath"
     
+    # Replace the old path with the new path in the INI file content
     $fileContent = Get-Content -Path $KEYVAULT_CONFIG
     $escapedOldPath = [regex]::Escape($oldPath)
     $newContent = $fileContent -replace $escapedOldPath, $newPath
     Set-Content -Path $KEYVAULT_CONFIG -Value $newContent
 }
 else {
-    # Ensure a trailing backslash
+    # Ensure a trailing backslash for the current path
     $newPath = (Split-Path -Path $KEYVAULT_CONFIG -Parent) + '\'
 
     "Replacing: $oldPath --> $newPath"
 
+    # Replace the old path with the current path in the INI file content
     $fileContent = Get-Content -Path $KEYVAULT_CONFIG
     $escapedOldPath = [regex]::Escape($oldPath)
     $newContent = $fileContent -replace $escapedOldPath, $newPath
