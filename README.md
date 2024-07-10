@@ -62,6 +62,13 @@ KeyVault leverages Public Key Infrastructure (PKI) to manage and encrypt your se
 
 - **Temporary Exposure**: There may be a brief period when the symmetric key is exposed in plaintext during the encryption or decryption process, especially if the key is written to disk or stored in memory insecurely.
 
+
+## When NOT to use PKI ?
+
+If PKI encryption is so effective, why don't we use it for all encryption?  
+
+The main reasons are performance and encryption limitations. If your workflow involves frequent decryption operations or encrypting large volumes of data, RSA is not practical. Decrypting with 2048-bit RSA can be hundreds or even thousands of times slower than 256-bit AES symmetric decryption, and RSA is only efficient for encrypting small amounts of data (typically 256 bytes or less, depending on key length). In such cases, it's better to use alternative solutions like GPG, key encryption keys (KEKs), or derived keys.  
+
 ## Getting Started
 
 ### Repository Structure
