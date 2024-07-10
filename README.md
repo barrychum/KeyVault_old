@@ -2,6 +2,17 @@
 
 KeyVault simplifies secure secret management. It stores encrypted key-value pairs for API keys, passwords, and other sensitive information in a text file format. This allows for easy backups and integration with environment variables. KeyVault even offers convenient access through macOS keychain, Windows Credential Manager, and clipboard, making it a versatile solution for keeping your secrets safe and readily available.  
 
+## Features
+
+- **Encrypt Secrets Using PKI**: Secure your secrets using public-key infrastructure. Supports up to 4096-bit RSA keys for future-proof security.
+- **Password-Protected Private Key**: Supports password protection on private keys, functioning similarly to 2FA for decryption.
+- **OS secure credential Integration**: Save your private key password in macOS Keychain or in Windows Credential Manager to avoid password fatigue.
+- **User-Friendly Secret Management**: Integrate with `fzf` for easy and quick selection of keys, using system-level OpenSSL for decryption.
+- **Secure by OS**: All critical encryption and decryption processes are handled by the OS's OpenSSL. No third-party tools are used. `fzf` is only used to retrieve key.
+- **Automatic Clipboard Clean Up**: Automatically clears the clipboard after use to enhance security.
+- **Easy Integration with Scripts**: This is particular useful to put API keys in your environment and access the secret in scripts.  A time-based One Time Password module is included in this repo for integration demo.
+- **Multi-platform**: The main function only requires OpenSSL which is available on popular platforms.
+
 ## For the Impatient
 If you are very impatient to try it out, use the following 30-seconds guide to install on your machine!  It will generate a short password for the generated private keys. 
 
@@ -19,6 +30,7 @@ set-keyvalue.sh key01 Key_secret
 get-keyvalue.sh key01 --display
 ```
 
+<!--
 ## Demo
 
 Installation demo  
@@ -27,16 +39,8 @@ Installation demo
 Basic operations demo  
 ![Animated SVG](assets/operate.svg)
 
-## Features
+-->
 
-- **Encrypt Secrets Using PKI**: Secure your secrets using public-key infrastructure. Supports up to 4096-bit RSA keys for future-proof security.
-- **Password-Protected Private Key**: Supports password protection on private keys, functioning similarly to 2FA for decryption.
-- **OS secure credential Integration**: Save your private key password in macOS Keychain or in Windows Credential Manager to avoid password fatigue.
-- **User-Friendly Secret Management**: Integrate with `fzf` for easy and quick selection of keys, using system-level OpenSSL for decryption.
-- **Secure by OS**: All critical encryption and decryption processes are handled by the OS's OpenSSL. No third-party tools are used. `fzf` is only used to retrieve key.
-- **Automatic Clipboard Clean Up**: Automatically clears the clipboard after use to enhance security.
-- **Easy Integration with Scripts**: This is particular useful to put API keys in your environment and access the secret in scripts.  A time-based One Time Password module is included in this repo for integration demo.
-- **Multi-platform**: The main function only requires OpenSSL which is available on popular platforms.
 
 ## Why Use PKI for KeyVault?
 
