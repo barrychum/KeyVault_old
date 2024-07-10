@@ -30,15 +30,18 @@ set-keyvalue.sh key01 Key_secret
 get-keyvalue.sh key01 --display
 ```
 
-<!--
+
 ## Demo
 
+Basic operations demo  
+<img src="assets/operate.svg" alt="Animated SVG" width="600">
+
+more demo coming soon ...
+
+<!--
 Installation demo  
 ![Animated SVG](assets/install3.svg)
   
-Basic operations demo  
-![Animated SVG](assets/operate.svg)
-
 -->
 
 
