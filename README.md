@@ -33,16 +33,17 @@ get-keyvalue.sh key01 --display
 
 ## Demo
 
+Installation demo  
+<img src="assets/macinstall.svg" alt="Animated SVG" width="600">
+<!--
+![Animated SVG](assets/macinstall.svg)
+-->
+
 Basic operations demo  
 <img src="assets/operate.svg" alt="Animated SVG" width="600">
 
 more demo coming soon ...
 
-<!--
-Installation demo  
-![Animated SVG](assets/install3.svg)
-  
--->
 
 
 ## Why Use PKI for KeyVault?
