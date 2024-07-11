@@ -10,7 +10,7 @@ KeyVault simplifies secure secret management. It stores encrypted key-value pair
 - **User-Friendly Secret Management**: Integrate with `fzf` for easy and quick selection of keys, using system-level OpenSSL for decryption.
 - **Secure by OS**: All critical encryption and decryption processes are handled by the OS's OpenSSL. No third-party tools are used. `fzf` is only used to retrieve key.
 - **Automatic Clipboard Clean Up**: Automatically clears the clipboard after use to enhance security.
-- **Easy Integration with Scripts**: This is particular useful to put API keys in your environment and access the secret in scripts.  A time-based One Time Password module is included in this repo for integration demo.
+- **Easy Integration with Scripts**: This is particular useful to put API keys in your environment and access the secret in scripts.  A time-based One Time Password module is included in this repo for integration demo. <span style="color: red;">No more plain text KEY in .env!</span>
 - **Multi-platform**: The main function only requires OpenSSL which is available on popular platforms.
 
 ## For the Impatient
