@@ -39,14 +39,13 @@ usage() {
     exit 1
 }
 
-# Function to retrieve a key's value from a file
+# Retrieve a key's value from a file
 get_key_value_in_file() {
     local key=$1
-    local file_location=$2
+    local subkey=$2
+    local file_location=$3
 
-    local value=$(awk -F= -v key="$key" \
-        '$1 == key {print substr($0, index($0, "=") + 1)}' \
-        "$file_location")
+    local value=$(jq -r --arg key "$key" --arg subkey "$subkey" '.[$key][$subkey] // empty' "$file_location")
     printf "%s" "$value"
 }
 
@@ -115,18 +114,17 @@ key_exist_in_file() {
 decrypt_value() {
     local encrypted_value="$1"
     local private_key="$2"
-    printf "%s" "$encrypted_value" | base64 --decode |
-        openssl pkeyutl -decrypt -inkey "$private_key"
-}
+    local private_key_protected="$3"
 
-# Function to decrypt a protected value using a private key and password
-decrypt_protected_value() {
-    local encrypted_value="$1"
-    local private_key="$2"
-    local private_key_pass="$3"
+    if $private_key_protected == "true"; then
+        local private_key_password=$(get_password)
+        printf "%s" "$encrypted_value" | base64 --decode |
+            openssl pkeyutl -decrypt -inkey "$private_key" -passin pass:"$private_key_password"
+    else
+        printf "%s" "$encrypted_value" | base64 --decode |
+            openssl pkeyutl -decrypt -inkey "$private_key"
+    fi
 
-    printf "%s" "$encrypted_value" | base64 --decode |
-        openssl pkeyutl -decrypt -inkey "$private_key" -passin pass:"$private_key_pass"
 }
 
 # Function to parse command-line arguments
@@ -174,60 +172,11 @@ else
     display_format="%s"
 fi
 
-# Check if the key exists in the keyvault database
-if key_exist_in_file "$key" "$ini_keyvault_db"; then
-    value=$(get_key_value_in_file "$key" "$ini_keyvault_db")
-    value_length=${#value}
-    message_length=$((value_length - 1))
-    var1="${value:0:message_length}"
-    var2="${value:message_length:1}"
+value=$(get_key_value_in_file "$key" "message" "$ini_keyvault_db")
+if [ -n "$value" ]; then
+    valuekey=$(get_key_value_in_file "$key" "messagekey" "$ini_keyvault_db")
+    privatekey="$ini_keyvault_keys/${valuekey/%_public.pem/_private.pem}"
+    privatekeyprotection=$(get_key_value_in_file "$key" "messagekeyprot" "$ini_keyvault_db")
 
-    is_encrypted=$((var2 % 2))
-
-    case $message_length in
-    [1-9])
-        echo "Input string is too short."
-        ;;
-    344)
-        if [ "$is_encrypted" -eq 0 ]; then
-            # Decrypt for RSA 2048, max message length 256 bytes
-            printf "$display_format" "$(decrypt_value "$var1" \
-                "$ini_key2048_private")"
-        else
-            # Decrypt for RSA 2048 protected, max message length 256 bytes
-            private_key_password=$(get_password)
-            printf "$display_format" "$(decrypt_protected_value "$var1" \
-                "$ini_key2048_protected_private" "$private_key_password")"
-        fi
-        ;;
-    512)
-        if [ "$is_encrypted" -eq 0 ]; then
-            # Decrypt for RSA 3072, max message length 384 bytes
-            printf "$display_format" "$(decrypt_value "$var1" \
-                "$ini_key3072_private")"
-        else
-            # Decrypt for RSA 3072 protected
-            private_key_password=$(get_password)
-            printf "$display_format" "$(decrypt_protected_value "$var1" \
-                "$ini_key3072_protected_private" "$private_key_password")"
-        fi
-        ;;
-    684)
-        if [ "$is_encrypted" -eq 0 ]; then
-            # Decrypt for RSA 4096, max message length 512 bytes
-            printf "$display_format" "$(decrypt_value "$var1" \
-                "$ini_key4096_private")"
-        else
-            # Decrypt for RSA 4096 protected
-            private_key_password=$(get_password)
-            printf "$display_format" "$(decrypt_protected_value "$var1" \
-                "$ini_key4096_protected_private" "$private_key_password")"
-        fi
-        ;;
-    *)
-        echo "Invalid length: $length"
-        ;;
-    esac
-else
-    printf ""
+    printf "$display_format" "$(decrypt_value "$value" "$privatekey" "$privatekeyprotection")"
 fi

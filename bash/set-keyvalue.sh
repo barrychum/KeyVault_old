@@ -28,6 +28,9 @@ parse_args() {
         --key=* | -k=*)
             key_size="${arg#*=}"
             ;;
+        --type=* | -t=*)
+            message_type="${arg#*=}"
+            ;;
         --totp)
             flag_totp=true
             ;;
@@ -74,11 +77,10 @@ parse_ini() {
 # Retrieve a key's value from a file
 get_key_value_in_file() {
     local key=$1
-    local file_location=$2
+    local subkey=$2
+    local file_location=$3
 
-    local value=$(awk -F= -v key="$key" \
-        '$1 == key {print substr($0, index($0, "=") + 1)}' \
-        "$file_location")
+    local value=$(jq -r --arg key "$key" --arg subkey "$subkey" '.[$key][$subkey] // empty' "$file_location")
     printf "%s" "$value"
 }
 
@@ -90,32 +92,92 @@ encrypt_value() {
         openssl pkeyutl -encrypt -pubin -inkey "$public_key_path" | base64
 }
 
-# Add or replace a key-value pair in sec_env
+# Add or replace a key-value pair
 add_key_value() {
-    local key=$1
-    local value=$2
+    local parent=$1
+    local subkey=$2
+    local value=$3
+    local file_location=$4
 
-    # Create sec_env file if it doesn't exist
-    touch "$ini_keyvault_db"
+    # Create the JSON file if it doesn't exist
+    if [ ! -f "$file_location" ]; then
+        echo "{}" >"$file_location"
+    fi
 
-    # Check if key exists and replace its value if confirmed
-    if grep -q "^$key=" "$ini_keyvault_db"; then
-        echo "Key already exists. Overwrite? (yes/no)"
+    # Read the content of the JSON file into a variable
+    local json_content
+    json_content=$(cat "$file_location")
+
+    # Initialize the parent if it doesn't exist or isn't an object
+    json_content=$(printf "%s" "$json_content" |
+        jq --arg parent "$parent" 'if .[$parent] == null then .[$parent] = {} elif .[$parent] | type != "object" then error("Parent key is not an object") else . end')
+
+    if [ $? -ne 0 ]; then
+        echo "Error: Parent key is not an object." >&2
+        return 1
+    fi
+
+    # Check if the subkey exists under the parent
+    if printf "%s" "$json_content" | jq -e --arg parent "$parent" --arg subkey "$subkey" '.[$parent] | has($subkey)' >/dev/null; then
+        echo "Subkey already exists under parent. Overwrite? (yes/no)" >&2
         read -r overwrite
         while [[ "$overwrite" != "yes" && "$overwrite" != "no" ]]; do
-            echo "Invalid input. Please enter yes or no: "
+            echo "Invalid input. Please enter yes or no: " >&2
             read -r overwrite
         done
 
         if [ "$overwrite" == "yes" ]; then
-            sed -i "" "s|^$key=.*|$key=$value|" "$ini_keyvault_db"
+            # Add the new subkey-value pair under the parent
+            json_content=$(printf "%s" "$json_content" |
+                jq --arg parent "$parent" --arg subkey "$subkey" --arg value "$value" '.[$parent][$subkey] = $value')
+            # Save the updated JSON content back to the file
+            printf "%s" "$json_content" >"$file_location"
+            echo "Key value updated successfully." >&2
+            return 0
         else
-            echo "Abort"
-            exit 1
+            echo "Operation aborted." >&2
+            return 1
         fi
     else
-        echo "$key=$value" >>"$ini_keyvault_db"
+        # Add the new subkey-value pair under the parent
+        json_content=$(printf "%s" "$json_content" |
+            jq --arg parent "$parent" --arg subkey "$subkey" --arg value "$value" '.[$parent][$subkey] = $value')
+        # Save the updated JSON content back to the file
+        printf "%s" "$json_content" >"$file_location"
+        echo "Key value added successfully." >&2
+        return 0
     fi
+}
+
+add_key_value_force() {
+    local parent=$1
+    local subkey=$2
+    local value=$3
+    local file_location=$4
+
+    # Create the JSON file if it doesn't exist
+    if [ ! -f "$file_location" ]; then
+        echo "{}" >"$file_location"
+    fi
+
+    # Read the content of the JSON file into a variable
+    local json_content
+    json_content=$(cat "$file_location")
+
+    # Initialize the parent if it doesn't exist or isn't an object
+    json_content=$(printf "%s" "$json_content" | jq --arg parent "$parent" 'if .[$parent] == null then .[$parent] = {} elif .[$parent] | type != "object" then error("Parent key is not an object") else . end')
+
+    if [ $? -ne 0 ]; then
+        echo "Error: Parent key is not an object." >&2
+        return 1
+    fi
+
+    # Add the new subkey-value pair under the parent
+    json_content=$(printf "%s" "$json_content" | jq --arg parent "$parent" --arg subkey "$subkey" --arg value "$value" '.[$parent][$subkey] = $value')
+
+    # Save the updated JSON content back to the file
+    printf "%s" "$json_content" >"$file_location"
+    return 0
 }
 
 # Interactive mode for user input
@@ -180,6 +242,7 @@ key_size="2048"        # Default key size
 flag_protected=false   # Default to non-protected private key
 flag_interactive=false # Default to non-interactive mode
 flag_totp=false        # Default to non-TOTP usage
+message_type="string"
 
 # Parse command-line arguments
 parse_args "$@"
@@ -204,6 +267,7 @@ fi
 # Determine secret type (plain or TOTP)
 if [ $flag_totp = true ]; then
     secret_type=1
+    message_type="totp"
 else
     secret_type=0
 fi
@@ -219,36 +283,34 @@ padding_char=$(printf "%s" "$padding")
 case "$key_size" in
 2048)
     if $flag_protected; then
-        encrypted_value="$(encrypt_value "$value" \
-            "$ini_key2048_protected_public")$padding_char"
+        encryption_key="$ini_key2048_protected_public"
     else
-        encrypted_value="$(encrypt_value "$value" \
-            "$ini_key2048_public")$padding_char"
+        encryption_key="$ini_key2048_public"
     fi
-    add_key_value "$key" "$encrypted_value"
     ;;
 3072)
     if $flag_protected; then
-        encrypted_value="$(encrypt_value "$value" \
-            "$ini_key3072_protected_public")$padding_char"
+        encryption_key="$ini_key3072_protected_public"
     else
-        encrypted_value="$(encrypt_value "$value" \
-            "$ini_key3072_public")$padding_char"
+        encryption_key="$ini_key3072_public"
     fi
-    add_key_value "$key" "$encrypted_value"
     ;;
 4096)
     if $flag_protected; then
-        encrypted_value="$(encrypt_value "$value" \
-            "$ini_key4096_protected_public")$padding_char"
+        encryption_key="$ini_key4096_protected_public"
     else
-        encrypted_value="$(encrypt_value "$value" \
-            "$ini_key4096_public")$padding_char"
+        encryption_key="$ini_key4096_public"
     fi
-    add_key_value "$key" "$encrypted_value"
     ;;
 *)
     usage
     ;;
 esac
-
+#encrypted_value="$(encrypt_value "$value" "$encryption_key")$padding_char"
+encrypted_value="$(encrypt_value "$value" "$encryption_key")"
+add_key_value "$key" "message" "$encrypted_value" "$ini_keyvault_db"
+if [ $? -eq 0 ]; then
+    add_key_value_force "$key" "messagetype" "$message_type" "$ini_keyvault_db"
+    add_key_value_force "$key" "messagekey" "$(basename "$encryption_key")" "$ini_keyvault_db"
+    add_key_value_force "$key" "messagekeyprot" "$flag_protected" "$ini_keyvault_db"
+fi

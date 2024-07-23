@@ -238,6 +238,8 @@ if [ $password_required_ini == "yes" ]; then
     generate_keys "$key_length" "yes" "$key_location"
 fi
 
+echo "{}" > $KEYVAULT_DB
+
 echo
 
 # Print setup confirmation and details
