@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-service="KeyVault"
+service="${1:-KeyVault}"  # Use the first argument or default to "KeyVault"
 account="private.key.password"
 
 # Retrieve the password

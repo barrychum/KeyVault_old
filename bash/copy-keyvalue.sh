@@ -37,22 +37,46 @@ parse_ini() {
 
 get_key_value_in_file() {
   local key=$1
-  local file_location=$2
+  local subkey=$2
+  local file_location=$3
 
-  local value=$(awk -F= -v key="$key" \
-    '$1 == key {print substr($0, index($0, "=") + 1)}' \
-    "$file_location")
+  local value=$(jq -r --arg key "$key" --arg subkey "$subkey" '.[$key][$subkey] // empty' "$file_location")
   printf "%s" "$value"
 }
 
+# Function to parse command-line arguments
 parse_args() {
-    for arg in "$@"; do
-        case $arg in
-        --display | -d)
-            flag_display=true
-            ;;
-        esac
-    done
+  for arg in "$@"; do
+    case $arg in
+    --display | -d)
+      flag_display=true
+      ;;
+    --path=* | -p=*)
+      KEYVAULT_DIR="${arg#*=}"
+      ;;
+    esac
+  done
+}
+
+generate_list() {
+  local file_location=$1
+
+  keys=$(jq -r 'keys[]' "$file_location")
+  for key in $keys; do
+    output="$key"
+    messagetype=$(get_key_value_in_file "$key" "messagetype" "$file_location")
+    messagekeyprot=$(get_key_value_in_file "$key" "messagekeyprot" "$file_location")
+
+    if [ "$messagetype" == "totp" ]; then
+      output+=" (TOTP)"
+    fi
+
+    if [ "$messagekeyprot" == "true" ]; then
+      output+=" (locked)"
+    fi
+
+    echo "$output"
+  done
 }
 
 ###########
@@ -65,25 +89,8 @@ parse_args "$@"
 KEYVAULT_CONFIG="$KEYVAULT_DIR/config.ini"
 parse_ini "$KEYVAULT_CONFIG"
 
-# Prepare the list with anotation
-fzf_list=$(awk -F= '
-{
-  key = $1
-  value = substr($0, index($0, "=") + 1)
-  value_length = length(value)
-  last_char = substr(value, value_length, 1)
-  padding = ""
-  key_type = int(last_char / 2)
-  if (key_type == 1) {
-    padding = " (TOTP)"
-  }
-  if (last_char % 2 == 1) {
-    padding = padding " (locked)"
-  }
-  print key padding
-}' "$ini_keyvault_db")
+fzf_list=$(generate_list "$ini_keyvault_db")
 
-# Use fzf to select the key
 selected_key=$(echo -e "$fzf_list" | fzf --prompt="Select a key: ")
 
 # Check if a key was selected
@@ -92,20 +99,19 @@ if [ -n "$selected_key" ]; then
   clean_key=$(echo -e "$selected_key" | sed 's/ (locked)$//g')
   clean_key=$(echo -e "$clean_key" | sed 's/ (TOTP)$//g')
   # Get the line corresponding to the selected key
-  value=$(get_key_value_in_file "$clean_key" $ini_keyvault_db)
+  value=$(get_key_value_in_file "$clean_key" "message" $ini_keyvault_db)
 else
   echo "No key selected"
   exit 1
 fi
 
-script_path=$(realpath "$0")
-
 # Split the script path into directory name and file name
+script_path=$(realpath "$0")
 script_dir=$(dirname "$script_path")
 script_file=$(basename "$script_path")
 
 # Run the get-keyvalue.sh in the same directory to retrieve key
-decrypted_value=$(${script_dir}/get-keyvalue.sh "$clean_key")
+decrypted_value=$(${script_dir}/get-keyvalue.sh "$clean_key" "-p=${KEYVAULT_DIR}")
 
 printf "\n"
 if [ $flag_display = true ]; then
@@ -127,3 +133,5 @@ else
     ) &
   fi
 fi
+
+

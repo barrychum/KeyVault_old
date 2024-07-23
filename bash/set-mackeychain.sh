@@ -17,7 +17,7 @@ prompt_password() {
 }
 
 # Variables
-service="KeyVault"
+service="${1:-KeyVault}"  # Use the first argument or default to "KeyVault"
 account="private.key.password"
 
 # Prompt the user for the password
